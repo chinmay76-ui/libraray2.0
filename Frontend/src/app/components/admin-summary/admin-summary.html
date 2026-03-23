@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - Library Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* ── Dusky background layers (same as pending/approved) ── */
+    .bg-photo {
+      position: fixed; inset: 0; z-index: 0;
+      background: url('/lib2.jpeg') center / cover no-repeat;
+      filter: brightness(0.52) saturate(0.6);
+      transform: scale(1.04);
+      animation: slowZoom 30s ease-in-out infinite alternate;
+    }
+    @keyframes slowZoom { from{transform:scale(1.04);}to{transform:scale(1.11);} }
+
+    .bg-dusk {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom,
+        rgba(8,4,2,.75) 0%, rgba(14,6,2,.5) 30%,
+        rgba(10,4,2,.52) 65%, rgba(6,2,1,.85) 100%);
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%,   rgba(160,80,20,.22)  0%, transparent 65%),
+        radial-gradient(ellipse 38% 50% at 8%  50%,  rgba(100,50,10,.13)  0%, transparent 55%),
+        radial-gradient(ellipse 38% 50% at 92% 50%,  rgba(100,50,10,.13)  0%, transparent 55%);
+    }
+    .bg-vignette {
+      position: fixed; inset: 0; z-index: 3; pointer-events: none;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 28%, rgba(0,0,0,.8) 100%);
+    }
+    #dust-canvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+
+    /* ── Page ── */
+    .library-background { position: relative; z-index: 5; min-height: 100vh; padding: 48px 20px 80px; }
+    .main-container { max-width: 1140px; margin: 0 auto; }
+
+    /* ── Glass card (same as pending/approved) ── */
+    .glass-card {
+      background: rgba(10,5,2,.72);
+      backdrop-filter: blur(32px) saturate(1.5); -webkit-backdrop-filter: blur(32px) saturate(1.5);
+      border: 1px solid rgba(200,140,40,.22); border-radius: 24px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 24px 70px rgba(0,0,0,.75), inset 0 1px 0 rgba(240,180,60,.1);
+      position: relative; overflow: hidden;
+    }
+    .glass-card::before {
+      content: ''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,195,70,.65), transparent);
+      pointer-events: none;
+    }
+    .glass-card::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 45%;
+      background: linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 100%);
+      pointer-events: none; border-radius: 24px 24px 0 0;
+    }
+
+    /* ── Header ── */
+    .header-card {
+      padding: 52px 44px 44px; margin-bottom: 28px; text-align: center;
+      animation: riseUp .75s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes riseUp { from{opacity:0;transform:translateY(34px);}to{opacity:1;transform:none;} }
+
+    .dashboard-icon {
+      font-size: 3.8rem; display: block; margin-bottom: 20px;
+      animation: bob 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 24px rgba(240,165,35,.7));
+    }
+    @keyframes bob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);} }
+
+    .eyebrow-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(160,90,10,.22); border: 1px solid rgba(240,175,55,.35);
+      border-radius: 50px; padding: 6px 18px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(255,210,85,.92); margin-bottom: 20px;
+    }
+    .e-dot {
+      width: 6px; height: 6px; background: #ffc845; border-radius: 50%;
+      box-shadow: 0 0 9px rgba(255,200,60,1); animation: blink 2s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:.15;} }
+
+    .dashboard-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.1rem,4.8vw,3.3rem); font-weight: 900; color: #fff;
+      line-height: 1.1; letter-spacing: -.02em; margin-bottom: 12px;
+      text-shadow: 0 2px 30px rgba(0,0,0,.8), 0 0 60px rgba(180,90,10,.3);
+    }
+    .dashboard-title em {
+      font-style: italic;
+      background: linear-gradient(90deg,#f5c842,#ffaa30,#ff8c42);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .dashboard-subtitle {
+      font-size: .78rem; font-weight: 600;
+      color: rgba(255,225,160,.45); letter-spacing: .13em; text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .summary-message {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(14,140,117,.18); border: 1px solid rgba(14,140,117,.35);
+      color: #6ee7b7; padding: 10px 28px; border-radius: 50px;
+      font-size: .85rem; font-weight: 600;
+      animation: glowPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes glowPulse { 0%,100%{box-shadow:0 0 14px rgba(14,140,117,.25);}50%{box-shadow:0 0 30px rgba(14,140,117,.48);} }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 16px; padding: 28px 32px !important;
+      margin-bottom: 28px !important;
+      animation: riseUp .75s .1s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    .stat-box {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,220,130,.1);
+      border-radius: 16px; padding: 20px 22px;
+      transition: transform .28s, background .28s, box-shadow .28s;
+    }
+    .stat-box:hover {
+      transform: translateY(-5px);
+      background: rgba(255,255,255,.1);
+      box-shadow: 0 16px 44px rgba(0,0,0,.5);
+    }
+
+    .stat-icon-wrap {
+      width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .si-blue { background: rgba(38,103,200,.2);  border: 1px solid rgba(38,103,200,.32); }
+    .si-teal { background: rgba(14,140,117,.2);  border: 1px solid rgba(14,140,117,.32); }
+    .si-gold { background: rgba(201,146,42,.2);  border: 1px solid rgba(201,146,42,.32); }
+
+    .stat-info { display: flex; flex-direction: column; }
+    .stat-label {
+      font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: rgba(255,220,130,.45); margin-bottom: 5px;
+    }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem; font-weight: 700; color: #fff; line-height: 1;
+    }
+
+    /* ── Table card ── */
+    .table-card {
+      padding: 36px 36px 40px;
+      animation: riseUp .75s .2s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+    }
+    .table-title { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #fff; }
+    .table-title em { font-style: italic; color: #ffc845; }
+    .table-count {
+      font-size: .7rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+      color: rgba(255,215,100,.55); padding: 5px 14px;
+      background: rgba(255,200,70,.08); border: 1px solid rgba(255,200,70,.18); border-radius: 50px;
+    }
+
+    .table-glass {
+      background: rgba(5,2,0,.58);
+      border: 1px solid rgba(200,140,40,.13);
+      border-radius: 18px; overflow: hidden;
+    }
+
+    .custom-table { width: 100%; border-collapse: collapse; font-size: .86rem; margin: 0; }
+    .custom-table thead tr { border-bottom: 1px solid rgba(200,140,40,.16); }
+    .custom-table thead th {
+      padding: 16px 20px; font-size: .66rem; font-weight: 700;
+      letter-spacing: .11em; text-transform: uppercase;
+      color: rgba(255,200,75,.78); background: rgba(0,0,0,.28);
+      border: none; white-space: nowrap;
+    }
+    .custom-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.05); transition: background .18s; }
+    .custom-table tbody tr:last-child { border-bottom: none; }
+    .custom-table tbody tr:hover { background: rgba(255,195,70,.06); }
+    .custom-table tbody td { padding: 15px 20px; vertical-align: middle; color: rgba(255,235,195,.8); border: none; font-size: .85rem; }
+
+    .user-id    { font-size: .73rem; font-weight: 700; color: rgba(255,215,120,.35); }
+    .user-name  { font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 700; color: #fff; }
+    .user-email { font-size: .78rem; color: rgba(255,195,80,.58); font-style: italic; }
+
+    /* Role select */
+    .role-select {
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,220,130,.2);
+      border-radius: 10px; padding: 8px 14px;
+      font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 600; color: #fff;
+      transition: border-color .2s, box-shadow .2s; outline: none; cursor: pointer; min-width: 155px;
+      color-scheme: dark;
+    }
+    .role-select option { background: #111; color: #fff; }
+    .role-select:focus { border-color: rgba(255,200,80,.5); box-shadow: 0 0 0 3px rgba(255,180,40,.14); }
+    .role-select:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* Action buttons */
+    .btn-update {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(38,103,200,.16); border: 1.5px solid rgba(96,165,250,.36);
+      color: #93c5fd; font-family: 'DM Sans', sans-serif;
+      font-size: .75rem; font-weight: 700; padding: 8px 17px; border-radius: 9px; cursor: pointer;
+      letter-spacing: .04em; text-transform: uppercase;
+      transition: background .2s, border-color .2s, transform .18s, box-shadow .2s; white-space: nowrap;
+    }
+    .btn-update:hover:not(:disabled) {
+      background: rgba(38,103,200,.3); border-color: rgba(96,165,250,.65);
+      transform: translateY(-2px); box-shadow: 0 6px 20px rgba(38,103,200,.35);
+    }
+
+    .btn-delete {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(220,38,38,.14); border: 1.5px solid rgba(248,113,113,.3);
+      color: #fca5a5; font-family: 'DM Sans', sans-serif;
+      font-size: .75rem; font-weight: 700; padding: 8px 17px; border-radius: 9px; cursor: pointer;
+      letter-spacing: .04em; text-transform: uppercase;
+      transition: background .2s, border-color .2s, transform .18s, box-shadow .2s; white-space: nowrap;
+    }
+    .btn-delete:hover:not(:disabled) {
+      background: rgba(220,38,38,.28); border-color: rgba(248,113,113,.62);
+      transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220,38,38,.32);
+    }
+
+    .btn-update:disabled, .btn-delete:disabled { opacity: .28; cursor: not-allowed; transform: none; box-shadow: none; }
+    .action-wrap { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+    /* Responsive */
+    @media(max-width:900px){ .stats-row{grid-template-columns:1fr 1fr;} }
+    @media(max-width:600px){
+      .stats-row{grid-template-columns:1fr;padding:20px !important;}
+      .header-card{padding:36px 20px 32px;}
+      .table-card{padding:20px 16px 28px;}
+      .custom-table thead th,.custom-table tbody td{padding:12px 10px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Dusky background layers -->
+<div class="bg-photo"></div>
+<div class="bg-dusk"></div>
+<div class="bg-glow"></div>
+<div class="bg-vignette"></div>
+<canvas id="dust-canvas"></canvas>
+
+<div class="library-background">
+  <div class="container main-container">
+
+    <!-- Header — logic untouched -->
+    <div class="header-card glass-card">
+      <span class="dashboard-icon">📚</span>
+      <div class="eyebrow-pill"><span class="e-dot"></span> Library Management System</div>
+      <h2 class="dashboard-title">Admin <em>Dashboard</em></h2>
+      <p class="dashboard-subtitle">User &amp; Role Management</p>
+      <p class="summary-message" *ngIf="summary">✦ {{ summary }}</p>
+    </div>
+
+    <!-- Stats — logic untouched -->
+    <div class="stats-row glass-card">
+      <div class="stat-box">
+        <div class="stat-icon-wrap si-blue"><i class="fas fa-user-graduate"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Students</span>
+          <span class="stat-value">{{ totalStudents }}</span>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon-wrap si-teal"><i class="fas fa-book-reader"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Librarians</span>
+          <span class="stat-value">{{ totalLibrarians }}</span>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon-wrap si-gold"><i class="fas fa-user-shield"></i></div>
+        <div class="stat-info">
+          <span class="stat-label">Total Admins</span>
+          <span class="stat-value">{{ totalAdmins }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table — logic untouched -->
+    <div class="table-card glass-card">
+      <div class="table-header">
+        <h3 class="table-title">All <em>Users</em></h3>
+        <span class="table-count">{{ users?.length || 0 }} members</span>
+      </div>
+
+      <div class="table-glass">
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th><i class="fas fa-hashtag me-1"></i> ID</th>
+                <th><i class="fas fa-user me-1"></i> Name</th>
+                <th><i class="fas fa-envelope me-1"></i> Email</th>
+                <th><i class="fas fa-user-tag me-1"></i> Role</th>
+                <th class="text-center"><i class="fas fa-cogs me-1"></i> Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of users" class="table-row">
+                <td><span class="user-id">#{{ user.id }}</span></td>
+                <td><span class="user-name">{{ user.name }}</span></td>
+                <td><span class="user-email">{{ user.email }}</span></td>
+                <td>
+                  <select
+                    class="role-select"
+                    [(ngModel)]="user.role"
+                    [disabled]="user.email === permanentAdminEmail"
+                  >
+                    <option value="STUDENT">📖 Student</option>
+                    <option value="LIBRARIAN">📝 Librarian</option>
+                    <option value="ADMIN">👑 Admin</option>
+                  </select>
+                </td>
+                <td>
+                  <div class="action-wrap">
+                    <button
+                      class="btn-update"
+                      (click)="assignRole(user.id, user.role)"
+                      [disabled]="user.email === permanentAdminEmail"
+                    >
+                      <i class="fas fa-sync-alt"></i> Update
+                    </button>
+                    <button
+                      class="btn-delete"
+                      (click)="deleteUser(user.id, user.email)"
+                      [disabled]="user.email === permanentAdminEmail"
+                    >
+                      <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* Floating golden dust motes — same as all other pages */
+const c = document.getElementById('dust-canvas'), ctx = c.getContext('2d');
+function resize(){ c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+const M = Array.from({length:55}, ()=>({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+  r:Math.random()*1.5+0.4, vx:(Math.random()-.5)*.18, vy:-(Math.random()*.22+.05),
+  o:Math.random()*.28+.06, p:Math.random()*Math.PI*2, ps:Math.random()*.003+.001
+}));
+(function frame(t){
+  ctx.clearRect(0,0,c.width,c.height);
+  M.forEach(m=>{
+    const a = m.o*(0.5+0.5*Math.sin(t*m.ps+m.p));
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,210,100,${a.toFixed(3)})`; ctx.fill();
+    m.x+=m.vx; m.y+=m.vy;
+    if(m.y<-4){m.y=c.height+4;m.x=Math.random()*c.width;}
+    if(m.x<-4)m.x=c.width+4; if(m.x>c.width+4)m.x=-4;
+  });
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

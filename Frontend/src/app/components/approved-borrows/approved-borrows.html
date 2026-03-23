@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approved Borrowed Books - Library Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    .bg-photo {
+      position: fixed; inset: 0; z-index: 0;
+      background: url('/lib2.jpeg') center / cover no-repeat;
+      filter: brightness(0.52) saturate(0.6);
+      transform: scale(1.04);
+      animation: slowZoom 30s ease-in-out infinite alternate;
+    }
+    @keyframes slowZoom { from{transform:scale(1.04);} to{transform:scale(1.11);} }
+    .bg-dusk {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(8,4,2,.75) 0%, rgba(14,6,2,.5) 30%, rgba(10,4,2,.52) 65%, rgba(6,2,1,.85) 100%);
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(160,80,20,.22) 0%, transparent 65%),
+        radial-gradient(ellipse 38% 50% at 8% 50%,  rgba(100,50,10,.13) 0%, transparent 55%),
+        radial-gradient(ellipse 38% 50% at 92% 50%, rgba(100,50,10,.13) 0%, transparent 55%);
+    }
+    .bg-vignette {
+      position: fixed; inset: 0; z-index: 3; pointer-events: none;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 28%, rgba(0,0,0,.8) 100%);
+    }
+    #dust-canvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+
+    .library-background { position: relative; z-index: 5; min-height: 100vh; padding: 52px 20px 88px; }
+    .main-container { max-width: 1100px; margin: 0 auto; }
+
+    /* Glass card */
+    .glass-card {
+      background: rgba(10,5,2,.72);
+      backdrop-filter: blur(32px) saturate(1.5); -webkit-backdrop-filter: blur(32px) saturate(1.5);
+      border: 1px solid rgba(200,140,40,.22); border-radius: 22px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 24px 70px rgba(0,0,0,.75), inset 0 1px 0 rgba(240,180,60,.1);
+      position: relative; overflow: hidden; margin-bottom: 26px;
+    }
+    .glass-card::before {
+      content: ''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,195,70,.65), transparent); pointer-events: none;
+    }
+    .glass-card::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 45%;
+      background: linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 100%);
+      pointer-events: none; border-radius: 22px 22px 0 0;
+    }
+
+    /* Header */
+    .header-card { text-align: center; padding: 52px 40px 46px; animation: riseUp .75s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes riseUp { from{opacity:0;transform:translateY(34px);} to{opacity:1;transform:none;} }
+
+    .dashboard-icon {
+      font-size: 3.8rem; display: block; margin-bottom: 20px;
+      animation: bob 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 24px rgba(52,210,150,.65));
+    }
+    @keyframes bob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);} }
+
+    .eyebrow-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(5,150,105,.18); border: 1px solid rgba(52,211,153,.32);
+      border-radius: 50px; padding: 6px 18px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(110,231,183,.9); margin-bottom: 20px;
+    }
+    .e-dot {
+      width: 6px; height: 6px; background: #6ee7b7; border-radius: 50%;
+      box-shadow: 0 0 9px rgba(110,231,183,.9); animation: blink 2s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:.15;} }
+
+    .dashboard-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.1rem,4.8vw,3.3rem); font-weight: 900; color: #fff;
+      line-height: 1.1; letter-spacing: -.02em; margin-bottom: 12px;
+      text-shadow: 0 2px 30px rgba(0,0,0,.8), 0 0 60px rgba(5,120,80,.25);
+    }
+    .dashboard-title em {
+      font-style: italic;
+      background: linear-gradient(90deg,#34d399,#6ee7b7,#a7f3d0);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .dashboard-subtitle { font-size: .78rem; font-weight: 600; color: rgba(200,255,230,.4); letter-spacing: .13em; text-transform: uppercase; }
+
+    /* Section */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 28px; border-bottom: 1px solid rgba(52,211,153,.14);
+    }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 1.18rem; font-weight: 700; color: #fff; }
+    .section-title em { font-style: italic; color: #6ee7b7; }
+    .count-badge {
+      background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.22);
+      color: rgba(110,231,183,.78); font-size: .68rem; font-weight: 700;
+      letter-spacing: .09em; text-transform: uppercase; padding: 5px 14px; border-radius: 50px;
+    }
+
+    /* Table */
+    .table-wrap { padding: 18px 22px 24px; }
+    .table-glass { background:rgba(5,2,0,.58); border:1px solid rgba(52,211,153,.12); border-radius:16px; overflow:hidden; }
+    .custom-table { width:100%; border-collapse:collapse; font-size:.85rem; margin:0; }
+    .custom-table thead tr { border-bottom:1px solid rgba(52,211,153,.15); }
+    .custom-table thead th { padding:16px 20px; font-size:.66rem; font-weight:700; letter-spacing:.11em; text-transform:uppercase; color:rgba(110,231,183,.72); background:rgba(0,0,0,.28); border:none; white-space:nowrap; }
+    .custom-table tbody tr { border-bottom:1px solid rgba(255,255,255,.05); transition:background .18s; }
+    .custom-table tbody tr:last-child { border-bottom:none; }
+    .custom-table tbody tr:hover { background:rgba(52,211,153,.05); }
+    .custom-table tbody td { padding:15px 20px; vertical-align:middle; color:rgba(255,235,195,.8); border:none; font-size:.85rem; }
+
+    .row-id   { font-size:.72rem; font-weight:700; color:rgba(255,215,120,.35); }
+    .user-name { font-family:'Playfair Display',serif; font-size:.95rem; font-weight:700; color:#fff !important; }
+    .book-title { font-style:italic; color:rgba(110,231,183,.65) !important; font-size:.83rem; }
+    .due-date   { color:rgba(255,220,150,.65); font-size:.82rem; }
+
+    /* Send reminder button */
+    .btn-reminder {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(38,103,200,.18); border: 1.5px solid rgba(96,165,250,.38);
+      color: #93c5fd; font-family: 'DM Sans', sans-serif;
+      font-size: .76rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      padding: 9px 20px; border-radius: 10px; cursor: pointer;
+      transition: background .2s, transform .18s, box-shadow .22s, border-color .2s;
+      white-space: nowrap;
+    }
+    .btn-reminder:hover {
+      background: rgba(38,103,200,.32); border-color: rgba(96,165,250,.65);
+      transform: translateY(-3px); box-shadow: 0 6px 22px rgba(38,103,200,.36);
+      color: #bfdbfe;
+    }
+
+    .action-cell { display:flex; justify-content:center; }
+
+    /* Empty */
+    .empty-row td { font-style:italic; color:rgba(200,255,220,.3) !important; padding:48px 18px !important; }
+
+    @media(max-width:768px){ .library-background{padding:36px 14px 60px;} .table-wrap{padding:14px 14px 18px;} .custom-table thead th,.custom-table tbody td{padding:11px 10px;} }
+    @media(max-width:576px){ .header-card{padding:38px 18px 32px;} .custom-table thead th,.custom-table tbody td{font-size:.75rem;padding:9px 7px;} .btn-reminder{font-size:.7rem;padding:7px 12px;} }
+  </style>
+</head>
+<body>
+
+<div class="bg-photo"></div>
+<div class="bg-dusk"></div>
+<div class="bg-glow"></div>
+<div class="bg-vignette"></div>
+<canvas id="dust-canvas"></canvas>
+
+<div class="library-background">
+  <div class="container main-container">
+
+    <!-- Header -->
+    <div class="glass-card header-card">
+      <span class="dashboard-icon">✅</span>
+      <div class="eyebrow-pill"><span class="e-dot"></span> Librarian Portal</div>
+      <h1 class="dashboard-title">Approved Borrowed <em>Books</em></h1>
+      <p class="dashboard-subtitle">Manage all approved borrow records &amp; reminders</p>
+    </div>
+
+    <!-- Table Card -->
+    <div class="glass-card" style="animation:riseUp .75s .14s cubic-bezier(.22,1,.36,1) both;">
+      <div class="section-header">
+        <h3 class="section-title">✅ Approved <em>Records</em></h3>
+        <span class="count-badge">{{ approvedRecords?.length || 0 }} Records</span>
+      </div>
+      <div class="table-wrap">
+        <div class="table-glass">
+          <div class="table-responsive">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                  <th><i class="fas fa-user me-1"></i>User</th>
+                  <th><i class="fas fa-book me-1"></i>Book</th>
+                  <th><i class="fas fa-calendar me-1"></i>Due Date</th>
+                  <th class="text-center"><i class="fas fa-cogs me-1"></i>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <!-- ── ALL ORIGINAL LOGIC UNTOUCHED ── -->
+                <tr *ngFor="let record of approvedRecords">
+                  <td><span class="row-id">#{{ record.id }}</span></td>
+                  <td><span class="user-name">{{ record.user?.name || 'Unknown' }}</span></td>
+                  <td><span class="book-title">{{ record.book?.title || 'Unknown' }}</span></td>
+                  <td><span class="due-date">{{ record.dueDate || 'N/A' }}</span></td>
+                  <td>
+                    <div class="action-cell">
+                      <button class="btn-reminder" (click)="sendManualReminder(record.id)">
+                        <i class="fas fa-envelope"></i> Send Reminder
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Empty state -->
+                <tr *ngIf="approvedRecords?.length === 0" class="empty-row">
+                  <td colspan="5" class="text-center">
+                    📭 No approved borrow records found.
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const c = document.getElementById('dust-canvas'), ctx = c.getContext('2d');
+function resize(){ c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+const M = Array.from({length:55}, ()=>({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+  r:Math.random()*1.5+0.4, vx:(Math.random()-.5)*.18, vy:-(Math.random()*.22+.05),
+  o:Math.random()*.28+.06, p:Math.random()*Math.PI*2, ps:Math.random()*.003+.001
+}));
+(function frame(t){
+  ctx.clearRect(0,0,c.width,c.height);
+  M.forEach(m=>{
+    const a = m.o*(0.5+0.5*Math.sin(t*m.ps+m.p));
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,210,100,${a.toFixed(3)})`; ctx.fill();
+    m.x+=m.vx; m.y+=m.vy;
+    if(m.y<-4){m.y=c.height+4;m.x=Math.random()*c.width;}
+    if(m.x<-4)m.x=c.width+4; if(m.x>c.width+4)m.x=-4;
+  });
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

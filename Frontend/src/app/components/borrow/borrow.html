@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Borrowed Books</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* ── Same 4-layer dusky background ── */
+    .bg-photo {
+      position: fixed; inset: 0; z-index: 0;
+      background: url('/lib2.jpeg') center / cover no-repeat;
+      filter: brightness(0.52) saturate(0.6);
+      transform: scale(1.04);
+      animation: slowZoom 30s ease-in-out infinite alternate;
+    }
+    @keyframes slowZoom { from{transform:scale(1.04);}to{transform:scale(1.11);} }
+    .bg-dusk {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: linear-gradient(to bottom,
+        rgba(8,4,2,.75) 0%, rgba(14,6,2,.50) 30%,
+        rgba(10,4,2,.52) 65%, rgba(6,2,1,.85) 100%);
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%,  rgba(160,80,20,.22) 0%, transparent 65%),
+        radial-gradient(ellipse 38% 50% at 8%  50%, rgba(100,50,10,.13) 0%, transparent 55%),
+        radial-gradient(ellipse 38% 50% at 92% 50%, rgba(100,50,10,.13) 0%, transparent 55%);
+    }
+    .bg-vignette {
+      position: fixed; inset: 0; z-index: 3; pointer-events: none;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 28%, rgba(0,0,0,.8) 100%);
+    }
+    #dust-canvas { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+
+    /* ── Page ── */
+    .library-background {
+      position: relative; z-index: 5;
+      min-height: 100vh;
+      padding: 60px 20px 80px;
+    }
+    .borrow-container { max-width: 1020px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 44px;
+      animation: riseUp .7s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes riseUp { from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;} }
+
+    .eyebrow-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(160,90,10,.2); border: 1px solid rgba(240,175,55,.32);
+      border-radius: 50px; padding: 6px 18px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(255,210,85,.92); margin-bottom: 16px;
+    }
+    .e-dot {
+      width: 6px; height: 6px; background: #ffc845; border-radius: 50%;
+      box-shadow: 0 0 9px rgba(255,200,60,1); animation: blink 2s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:.15;} }
+
+    .borrowed-header {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem,4.5vw,3rem);
+      font-weight: 900; color: #fff;
+      letter-spacing: -.02em; line-height: 1.1; margin-bottom: 10px;
+      text-shadow: 0 2px 30px rgba(0,0,0,.8);
+    }
+    .borrowed-header em {
+      font-style: italic;
+      background: linear-gradient(90deg,#f5c842,#ffaa30,#ff8c42);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-sub { font-size: .93rem; color: rgba(255,225,160,.4); font-weight: 300; }
+
+    /* ── State blocks ── */
+    .state-block {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 22px; border-radius: 14px;
+      font-size: .88rem; font-weight: 600;
+      margin-bottom: 24px; animation: riseUp .5s ease both;
+    }
+    .state-loading { background:rgba(38,103,200,.08); border:1px solid rgba(38,103,200,.2); color:#7bb8ff; }
+    .state-error   { background:rgba(192,56,90,.08);  border:1px solid rgba(192,56,90,.22); color:#f08098; }
+    .spin-ring {
+      width:18px; height:18px; flex-shrink:0;
+      border:2px solid rgba(38,103,200,.2); border-top-color:#2667c8;
+      border-radius:50%; animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    /* ── Glass table wrapper ── */
+    .table-glass {
+      background: rgba(10,5,2,.72);
+      backdrop-filter: blur(32px) saturate(1.5); -webkit-backdrop-filter: blur(32px) saturate(1.5);
+      border: 1px solid rgba(200,140,40,.22);
+      border-radius: 22px; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 24px 70px rgba(0,0,0,.75), inset 0 1px 0 rgba(240,180,60,.1);
+      animation: riseUp .7s .12s cubic-bezier(.22,1,.36,1) both;
+      position: relative;
+    }
+    .table-glass::before {
+      content: ''; position: absolute; top: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,195,70,.65), transparent);
+    }
+    .table-glass::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 45%;
+      background: linear-gradient(180deg, rgba(255,255,255,.03) 0%, transparent 100%);
+      pointer-events: none; border-radius: 22px 22px 0 0;
+    }
+
+    .table-responsive { overflow-x: auto; }
+
+    /* ── Table ── */
+    .borrowed-table { width:100%; border-collapse:collapse; font-size:.86rem; }
+
+    .borrowed-table thead tr { border-bottom:1px solid rgba(200,140,40,.16); }
+    .borrowed-table th {
+      font-family:'DM Sans',sans-serif;
+      font-size:.66rem; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+      color:rgba(255,200,75,.78);
+      padding:16px 20px; text-align:left;
+      background:rgba(0,0,0,.28); white-space:nowrap;
+    }
+    .borrowed-table td {
+      padding:15px 20px; text-align:left;
+      color:rgba(255,235,195,.8);
+      font-size:.85rem;
+      border-bottom:1px solid rgba(255,255,255,.05);
+      transition:background .18s;
+    }
+    .borrowed-table tbody tr:last-child td { border-bottom:none; }
+    .borrowed-table tbody tr:hover td { background:rgba(255,195,70,.05); }
+
+    /* Column styles */
+    .book-title  { font-family:'Playfair Display',serif; font-size:.95rem; font-weight:700; color:#fff !important; letter-spacing:-.01em; }
+    .book-author { font-style:italic; color:rgba(255,195,80,.65) !important; font-size:.82rem; }
+    .date-cell   { color:rgba(255,215,130,.45) !important; font-size:.82rem; }
+
+    /* Status badges */
+    .status-badge {
+      display:inline-flex; align-items:center;
+      padding:4px 12px; border-radius:50px;
+      font-size:.68rem; font-weight:700;
+      letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
+    }
+    .st-pending  { background:rgba(234,179,8,.14); color:#fde68a; border:1px solid rgba(234,179,8,.3); }
+    .st-borrowed { background:rgba(14,140,117,.14); color:#6ee7b7; border:1px solid rgba(14,140,117,.3); }
+    .st-overdue  { background:rgba(220,38,38,.14);  color:#fca5a5; border:1px solid rgba(220,38,38,.3); }
+    .st-returned { background:rgba(255,255,255,.06); color:rgba(255,255,255,.35); border:1px solid rgba(255,255,255,.1); }
+
+    /* Return button */
+    .btn-return {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(220,38,38,.14); border:1.5px solid rgba(248,113,113,.3);
+      color:#fca5a5; font-family:'DM Sans',sans-serif;
+      font-size:.75rem; font-weight:700; padding:8px 17px; border-radius:9px; cursor:pointer;
+      letter-spacing:.04em; text-transform:uppercase;
+      transition:background .2s,border-color .2s,transform .18s,box-shadow .2s; white-space:nowrap;
+    }
+    .btn-return:hover {
+      background:rgba(220,38,38,.28); border-color:rgba(248,113,113,.62);
+      transform:translateY(-2px); box-shadow:0 6px 20px rgba(220,38,38,.32); color:#fecaca;
+    }
+    .btn-return:active { transform:scale(.97); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align:center; padding:70px 20px;
+      background:rgba(10,5,2,.72);
+      backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px);
+      border:1px dashed rgba(200,140,40,.18);
+      border-radius:22px; margin-top:8px;
+      animation:riseUp .7s .12s ease both;
+    }
+    .empty-ico { font-size:3rem; margin-bottom:14px; opacity:.55; }
+    .empty-h   { font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; color:rgba(255,235,195,.65); margin-bottom:8px; }
+    .empty-p   { font-size:.85rem; color:rgba(255,220,130,.32); }
+
+    /* Responsive */
+    @media(max-width:768px){
+      .library-background{padding:40px 14px 60px;}
+      .borrowed-table th,.borrowed-table td{padding:12px 12px; font-size:.8rem;}
+      .borrowed-header{font-size:1.7rem;}
+    }
+    @media(max-width:576px){
+      .borrowed-table th,.borrowed-table td{padding:10px 8px; font-size:.75rem;}
+      .btn-return{padding:6px 11px; font-size:.72rem;}
+      .borrowed-header{font-size:1.35rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Same 4-layer dusky background -->
+<div class="bg-photo"></div>
+<div class="bg-dusk"></div>
+<div class="bg-glow"></div>
+<div class="bg-vignette"></div>
+<canvas id="dust-canvas"></canvas>
+
+<div class="library-background">
+  <div class="borrow-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="eyebrow-pill"><span class="e-dot"></span> My Reading Record</div>
+      <h2 class="borrowed-header">My Borrowed <em>Books</em></h2>
+      <p class="header-sub">Track, manage and return your active borrows</p>
+    </div>
+
+    <!-- Loading — logic untouched -->
+    <div *ngIf="loading" class="state-block state-loading">
+      <div class="spin-ring"></div>
+      <span>Loading your borrowed books…</span>
+    </div>
+
+    <!-- Error — logic untouched -->
+    <div *ngIf="errorMessage" class="state-block state-error">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- Table — all logic untouched -->
+    <div class="table-glass" *ngIf="!loading && borrowedBooks.length > 0">
+      <div class="table-responsive">
+        <table class="borrowed-table">
+          <thead>
+            <tr>
+              <th><i class="fas fa-book me-1"></i>Title</th>
+              <th><i class="fas fa-pen-nib me-1"></i>Author</th>
+              <th><i class="fas fa-calendar-plus me-1"></i>Borrow Date</th>
+              <th><i class="fas fa-calendar-times me-1"></i>Due Date</th>
+              <th><i class="fas fa-circle me-1"></i>Status</th>
+              <th class="text-center"><i class="fas fa-undo me-1"></i>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let record of borrowedBooks">
+              <td class="book-title">{{ record.book.title }}</td>
+              <td class="book-author">{{ record.book.author }}</td>
+              <td class="date-cell">{{ record.borrowDate }}</td>
+              <td class="date-cell">{{ record.dueDate }}</td>
+              <td>
+                <span class="status-badge"
+                  [ngClass]="{
+                    'st-pending':  record.status === 'Pending',
+                    'st-borrowed': record.status === 'Borrowed',
+                    'st-overdue':  record.status === 'Overdue',
+                    'st-returned': record.status === 'Returned'
+                  }">
+                  {{ record.status }}
+                </span>
+              </td>
+              <td class="text-center">
+                <button
+                  *ngIf="record.status.toUpperCase() === 'BORROWED'"
+                  class="btn-return"
+                  (click)="returnBook(record.id)">
+                  <i class="fas fa-undo-alt"></i> Return Book
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty state — logic untouched -->
+    <div *ngIf="!loading && borrowedBooks.length === 0 && !errorMessage" class="empty-state">
+      <div class="empty-ico">📭</div>
+      <p class="empty-h">No borrowed books found</p>
+      <p class="empty-p">Head to the catalogue to borrow your first book.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* Same floating dust motes as every other page */
+const c = document.getElementById('dust-canvas'), ctx = c.getContext('2d');
+function resize(){ c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+const M = Array.from({length:55}, ()=>({
+  x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+  r:Math.random()*1.5+0.4, vx:(Math.random()-.5)*.18, vy:-(Math.random()*.22+.05),
+  o:Math.random()*.28+.06, p:Math.random()*Math.PI*2, ps:Math.random()*.003+.001
+}));
+(function frame(t){
+  ctx.clearRect(0,0,c.width,c.height);
+  M.forEach(m=>{
+    const a = m.o*(0.5+0.5*Math.sin(t*m.ps+m.p));
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,210,100,${a.toFixed(3)})`; ctx.fill();
+    m.x+=m.vx; m.y+=m.vy;
+    if(m.y<-4){m.y=c.height+4;m.x=Math.random()*c.width;}
+    if(m.x<-4)m.x=c.width+4; if(m.x>c.width+4)m.x=-4;
+  });
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
